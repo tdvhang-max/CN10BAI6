@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thí nghiệm ảo – Xác định độ chua của đất</title>
+<style>
+:root{
+  --green:#16834b;
+  --green2:#22a861;
+  --blue:#2f73e8;
+  --ink:#17324d;
+  --muted:#64748b;
+  --line:#d8e5de;
+  --bg:#eef8f2;
+  --panel:#fff;
+  --soil:#8a5528;
+  --water:#d8bd8e;
+  --ok:#0b7a4f;
+  --warn:#a35a00;
+  --bad:#b42323;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:linear-gradient(180deg,#fbfffc,#eef8f2);
+  color:var(--ink);
+}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+button:disabled{opacity:.45;cursor:not-allowed}
+.app{max-width:1100px;margin:auto;padding:14px}
+.hero{
+  background:linear-gradient(135deg,#0f6d3b,#27a663);
+  color:#fff;border-radius:22px;padding:22px;
+  box-shadow:0 12px 28px rgba(18,100,56,.18);
+}
+.hero h1{margin:0 0 8px;font-size:clamp(24px,4vw,38px)}
+.hero p{margin:0;line-height:1.55}
+.topbar{
+  margin:14px 0;background:#fff;border:1px solid var(--line);
+  border-radius:16px;padding:12px 14px;display:flex;gap:12px;
+  align-items:center;flex-wrap:wrap;
+}
+.progress-wrap{flex:1;min-width:220px}
+.progress-label{font-weight:700;margin-bottom:6px}
+.progress{height:10px;background:#e8f1ec;border-radius:999px;overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#20a65f,#67cf91);transition:.3s}
+.btn{
+  border:0;border-radius:12px;padding:11px 15px;min-height:44px;
+  font-weight:700;
+}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-green{background:var(--green2);color:#fff}
+.btn-light{background:#eef4f1;color:#24483a}
+.btn-soft{background:#edf4ff;color:#155bb7}
+.btn-danger{background:#ffe9e9;color:#a02525}
+.screen{
+  display:none;background:#fff;border:1px solid var(--line);
+  border-radius:20px;padding:18px;margin-bottom:18px;
+  box-shadow:0 10px 26px rgba(34,88,58,.08);
+}
+.screen.active{display:block}
+.screen h2{margin:0 0 6px;color:#12653a;font-size:clamp(22px,3vw,30px)}
+.subtitle{color:var(--muted);line-height:1.55;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+.card{background:#fbfefc;border:1px solid var(--line);border-radius:16px;padding:15px}
+.card h3{margin:0 0 12px;color:#174f35}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.status{
+  margin-top:12px;padding:11px 13px;border-radius:12px;
+  background:#eef6ff;color:#184e88;border:1px solid #cfe2ff;
+  line-height:1.45;
+}
+.status.ok{background:#e9fbf2;color:#0b714b;border-color:#bcebd4}
+.status.warn{background:#fff6e9;color:#8a4c00;border-color:#ffd9a3}
+.status.bad{background:#fff0f0;color:#a12222;border-color:#ffc7c7}
+details{
+  margin-top:12px;border:1px dashed #acd1bd;border-radius:12px;
+  background:#f4fbf7;padding:11px;line-height:1.5;
+}
+summary{cursor:pointer;font-weight:700;color:#176a3f}
+.lab{
+  min-height:360px;border:1px solid #e0e7eb;border-radius:16px;
+  background:linear-gradient(#f9fcfe 0 76%,#ddd7ce 76% 80%,#eee7dd 80%);
+  position:relative;overflow:hidden;
+}
+.scale{
+  position:absolute;left:50%;bottom:48px;transform:translateX(-50%);
+  width:260px;height:125px;background:#3d4d58;border-radius:18px 18px 10px 10px;
+  box-shadow:0 8px 18px rgba(0,0,0,.18);
+}
+.pan{
+  position:absolute;left:48px;top:-32px;width:165px;height:43px;
+  background:#cbd4da;border:4px solid #98a5ad;border-radius:50%;
+}
+.paper{
+  position:absolute;left:88px;top:-39px;width:82px;height:56px;
+  background:#fff;border:1px solid #d1d5db;transform:skew(-7deg);transition:.5s;
+}
+.paper.with-soil:after{
+  content:"";position:absolute;left:17px;top:14px;width:48px;height:24px;
+  border-radius:50%;background:radial-gradient(circle at 30% 25%,#a66d38,#6f431e);
+}
+.display{
+  position:absolute;left:65px;bottom:18px;width:130px;height:37px;
+  background:#baff55;border:4px solid #1f2937;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font:800 20px Consolas,monospace;color:#18240f;
+}
+.flasks{
+  display:flex;gap:24px;justify-content:center;align-items:end;
+  flex-wrap:wrap;margin-top:14px;
+}
+.flask-box{text-align:center;min-width:180px}
+.flask-title{font-weight:800;color:#14532d;margin-bottom:6px}
+.flask-svg{width:180px;height:235px;filter:drop-shadow(0 7px 8px rgba(0,0,0,.12))}
+.cylinder-wrap{text-align:center}
+.cylinder{
+  width:95px;height:250px;margin:auto;position:relative;
+  border:4px solid #8798a4;border-top:0;border-radius:0 0 18px 18px;
+  background:rgba(255,255,255,.5);overflow:hidden;
+}
+.cylinder:before{
+  content:"";position:absolute;left:8px;right:8px;top:46%;
+  border-top:3px dashed #d72525;z-index:3;
+}
+.cylinder:after{
+  content:"50 mL";position:absolute;right:3px;top:calc(46% - 22px);
+  color:#b91c1c;font-size:12px;font-weight:700;z-index:3;
+}
+.cyl-liquid{
+  position:absolute;left:0;right:0;bottom:0;height:0;
+  background:rgba(116,188,255,.62);transition:1.1s;
+}
+.marks{
+  position:absolute;inset:10px 6px;background:repeating-linear-gradient(
+    to bottom,transparent 0 17px,#73838d 18px 19px
+  );opacity:.55;z-index:2;pointer-events:none;
+}
+.shake{animation:shake .55s infinite alternate ease-in-out}
+@keyframes shake{from{transform:rotate(-7deg) translateX(-6px)}to{transform:rotate(7deg) translateX(6px)}}
+.small-progress{height:12px;background:#e5eee9;border-radius:999px;overflow:hidden;margin-top:12px}
+.small-progress span{display:block;height:100%;width:0;background:var(--green2)}
+.meter-stage{
+  position:relative;min-height:430px;border:1px solid #e0e7eb;border-radius:16px;
+  background:linear-gradient(#f8fbfd 0 80%,#e6ddd1 80%);
+  overflow:hidden;
+}
+.meter{
+  position:absolute;left:55px;top:55px;width:150px;height:118px;
+  background:#263745;border-radius:16px;padding:12px;
+  box-shadow:0 8px 18px rgba(0,0,0,.18);
+}
+.meter-screen{
+  height:62px;background:#b9ff55;border:4px solid #101b25;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font:800 24px Consolas,monospace;color:#17230c;
+}
+.meter-name{text-align:center;color:#fff;font-size:13px;font-weight:700;margin-top:6px}
+.wire{
+  position:absolute;left:190px;top:95px;width:235px;height:80px;
+  border-top:5px solid #111827;border-right:5px solid #111827;
+  border-radius:0 50px 0 0;
+}
+.measure-flask{position:absolute;left:300px;bottom:25px;width:245px;height:310px}
+.electrode{
+  position:absolute;left:405px;top:10px;width:24px;height:210px;
+  background:linear-gradient(90deg,#d8e0e6,#9ba8b3,#eef4f7);
+  border:1px solid #7c8993;border-radius:8px;transition:1s ease;z-index:9;
+}
+.electrode:after{
+  content:"";position:absolute;left:3px;right:3px;bottom:-20px;height:28px;
+  background:#344150;border-radius:0 0 14px 14px;border:1px solid #18222c;
+}
+.electrode.lowered{top:118px}
+.zone{
+  position:absolute;left:350px;bottom:113px;width:140px;height:28px;
+  background:rgba(34,197,94,.18);border-top:2px dashed #22a65a;border-bottom:2px dashed #22a65a;
+  z-index:5;
+}
+.surface{
+  position:absolute;left:350px;bottom:142px;width:140px;border-top:2px solid #7f5f38;z-index:5;
+}
+.zone-label,.surface-label{
+  position:absolute;left:500px;font-size:12px;font-weight:800;
+}
+.zone-label{bottom:117px;color:#087f5b}
+.surface-label{bottom:137px;color:#7c4a1e}
+.class-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:12px}
+.class-btn{
+  border:2px solid #dfe8e3;background:#fff;border-radius:14px;
+  padding:12px 8px;min-height:68px;font-weight:700;text-align:center;
+}
+.class-btn.good{background:#e7f9ef;border-color:#22a65a;color:#0b6a3d}
+.class-btn.bad{background:#fff1f1;border-color:#ef4444}
+.question{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:14px}
+.question h4{margin:0 0 10px}
+.option{
+  display:block;width:100%;text-align:left;margin:8px 0;padding:11px 12px;
+  border-radius:12px;border:1px solid #dce5e0;background:#fff;
+}
+.option.good{background:#e8fbf2;border-color:#42b883}
+.option.bad{background:#fff0f0;border-color:#ef7777}
+.result{border:2px solid #bfe8d0;background:#f8fffb;border-radius:18px;padding:18px}
+.result table{width:100%;border-collapse:collapse}
+.result td{padding:11px;border-bottom:1px solid #e3e9e6}
+.result td:last-child{text-align:right;font-weight:800}
+.celebrate{
+  display:none;margin-top:16px;padding:20px;text-align:center;border-radius:18px;
+  background:linear-gradient(135deg,#e9fff1,#eef7ff);border:2px solid #69c58c;
+  font-size:clamp(22px,4vw,32px);font-weight:900;color:#0c6c3d;
+}
+.modal{
+  display:none;position:fixed;inset:0;background:rgba(15,23,42,.48);
+  z-index:99;padding:18px;overflow:auto;
+}
+.modal.show{display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:18px;padding:18px;max-width:760px;width:100%;max-height:90vh;overflow:auto}
+.lookup{width:100%;border-collapse:collapse}
+.lookup th,.lookup td{border:1px solid #cfe0d7;padding:9px;text-align:center}
+.lookup th{background:#e9f7ef}
+@media(max-width:820px){
+  .grid{grid-template-columns:1fr}
+  .class-grid{grid-template-columns:repeat(2,1fr)}
+  .meter-stage{min-height:530px}
+  .meter{left:50%;transform:translateX(-50%);top:25px}
+  .wire{display:none}
+  .measure-flask{left:50%;transform:translateX(-50%);bottom:20px}
+  .electrode{left:calc(50% - 12px);top:90px}
+  .electrode.lowered{top:215px}
+  .zone,.surface{left:calc(50% - 70px)}
+  .zone-label,.surface-label{left:calc(50% + 76px)}
+}
+@media(max-width:520px){
+  .app{padding:10px}.screen{padding:14px}
+  .class-grid{grid-template-columns:1fr}
+  .btn{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="hero">
+    <h1>THÍ NGHIỆM ẢO – XÁC ĐỊNH ĐỘ CHUA CỦA ĐẤT</h1>
+    <p>Đo pH<sub>H₂O</sub> và pH<sub>KCl</sub>, phân loại đất và giải thích vì sao pH<sub>KCl</sub> thường thấp hơn pH<sub>H₂O</sub>.</p>
+  </section>
+
+  <div class="topbar">
+    <div class="progress-wrap">
+      <div class="progress-label" id="progressLabel">Sẵn sàng bắt đầu</div>
+      <div class="progress"><span id="progressBar"></span></div>
+    </div>
+    <button class="btn btn-soft" id="lookupBtn">📖 Bảng tra cứu</button>
+  </div>
+
+  <section class="screen active" id="s0">
+    <h2>Phòng thực hành đất</h2>
+    <div class="subtitle">Máy đo pH đã được hiệu chuẩn. Hai bình tam giác miệng rộng 100 mL đã được chuẩn bị sẵn, không cần chọn dung tích bình.</div>
+    <div class="actions">
+      <button class="btn btn-green" id="startBtn">▶ BẮT ĐẦU THỰC HÀNH</button>
+    </div>
+  </section>
+
+  <section class="screen" id="s1">
+    <h2>Bước 1. Cân hai mẫu đất</h2>
+    <div class="subtitle">Mỗi lần bấm thêm đất, khối lượng tăng 5 g. Cần cân đúng 20 g cho mỗi bình.</div>
+    <div class="grid">
+      <div class="lab">
+        <div class="scale">
+          <div class="pan"></div>
+          <div class="paper" id="paper"></div>
+          <div class="display" id="massDisplay">0.00 g</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 id="weighTitle">Cân đất cho Bình 1 – H₂O</h3>
+        <div class="actions">
+          <button class="btn btn-light" id="tareBtn">ĐẶT GIẤY VÀ TRỪ BÌ</button>
+          <button class="btn btn-green" id="addBtn" disabled>+ THÊM 5 g</button>
+          <button class="btn btn-danger" id="subBtn" disabled>− BỚT 5 g</button>
+          <button class="btn btn-primary" id="transferBtn" disabled>CHO ĐẤT VÀO BÌNH</button>
+        </div>
+        <div class="status" id="weighStatus">Hãy đặt giấy cân và trừ bì.</div>
+        <details><summary>💡 Vì sao phải xử lí mẫu đất?</summary>Mẫu đất được để khô tự nhiên, nghiền nhỏ và rây qua rây 1 mm để mẫu đồng đều và kết quả có tính đại diện.</details>
+      </div>
+    </div>
+    <div class="flasks" id="flasks1"></div>
+    <div class="actions"><button class="btn btn-primary" id="next1" disabled>TIẾP TỤC</button></div>
+  </section>
+
+  <section class="screen" id="s2">
+    <h2>Bước 2. Đong và thêm dung dịch</h2>
+    <div class="subtitle">Bình 1 nhận 50 mL nước cất. Bình 2 nhận 50 mL KCl 1N.</div>
+    <div class="grid">
+      <div class="card cylinder-wrap">
+        <h3 id="solutionTitle">Đong 50 mL nước cất</h3>
+        <div class="cylinder" id="cylinder">
+          <div class="cyl-liquid" id="cylLiquid"></div>
+          <div class="marks"></div>
+        </div>
+        <div class="actions" style="justify-content:center">
+          <button class="btn btn-green" id="fillBtn">RÓT ĐẾN VẠCH 50 mL</button>
+          <button class="btn btn-primary" id="pourBtn" disabled>ĐỔ VÀO BÌNH</button>
+        </div>
+        <div class="status" id="solutionStatus">Hãy rót đến đúng vạch 50 mL.</div>
+      </div>
+      <div class="card">
+        <h3>Hai bình mẫu</h3>
+        <div class="flasks" id="flasks2"></div>
+        <details><summary>💡 Vì sao dùng hai dung dịch?</summary>Nước cất phản ánh độ chua hiện tại. KCl giúp đẩy thêm H⁺ bám trên keo đất ra dung dịch để xác định độ chua trao đổi.</details>
+      </div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" id="next2" disabled>TIẾP TỤC</button></div>
+  </section>
+
+  <section class="screen" id="s3">
+    <h2>Bước 3. Lắc mẫu</h2>
+    <div class="subtitle">Mô phỏng lắc bằng tay trong 15–20 phút.</div>
+    <div class="flasks" id="flasks3"></div>
+    <div class="card">
+      <button class="btn btn-green" id="shakeBtn">LẮC CẢ HAI BÌNH</button>
+      <div class="small-progress"><span id="shakeProgress"></span></div>
+      <div class="status" id="shakeStatus">Chưa lắc mẫu.</div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" id="next3" disabled>TIẾP TỤC</button></div>
+  </section>
+
+  <section class="screen" id="s4">
+    <h2>Bước 4. Đo pH bằng nước cất</h2>
+    <div class="subtitle">Điện cực đi từ trên xuống qua miệng bình. Đầu dò chỉ ngập khoảng 2 cm dưới mặt dung dịch, không chạm thành, không chạm đáy và không cắm vào lớp đất lắng.</div>
+    <div class="grid">
+      <div class="meter-stage">
+        <div class="meter">
+          <div class="meter-screen" id="ph1">--.--</div>
+          <div class="meter-name">pH meter</div>
+        </div>
+        <div class="wire"></div>
+        <div class="electrode" id="electrode1"></div>
+        <div class="measure-flask" id="measureFlask1"></div>
+        <div class="surface"></div><div class="surface-label">Mặt dung dịch</div>
+        <div class="zone"></div><div class="zone-label">Vùng đo chuẩn 2 cm</div>
+      </div>
+      <div class="card">
+        <h3>Bình 1 – H₂O</h3>
+        <div class="actions">
+          <button class="btn btn-green" id="lower1">HẠ ĐIỆN CỰC</button>
+          <button class="btn btn-primary" id="measure1" disabled>BẮT ĐẦU ĐO</button>
+        </div>
+        <div class="small-progress"><span id="measureProgress1"></span></div>
+        <div class="status" id="measureStatus1">Điện cực chưa được đặt vào mẫu.</div>
+      </div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" id="next4" disabled>TIẾP TỤC</button></div>
+  </section>
+
+  <section class="screen" id="s5">
+    <h2>Bước 5. Rửa điện cực và đo pH bằng KCl</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Vệ sinh điện cực</h3>
+        <div class="actions">
+          <button class="btn btn-light" id="lift">1. NHẤC ĐIỆN CỰC</button>
+          <button class="btn btn-soft" id="rinse" disabled>2. RỬA BẰNG NƯỚC CẤT</button>
+          <button class="btn btn-light" id="blot" disabled>3. THẤM KHÔ NHẸ</button>
+        </div>
+        <div class="status" id="rinseStatus">Cần nhấc điện cực khỏi bình H₂O.</div>
+      </div>
+      <div class="meter-stage">
+        <div class="meter">
+          <div class="meter-screen" id="ph2">--.--</div>
+          <div class="meter-name">pH meter</div>
+        </div>
+        <div class="wire"></div>
+        <div class="electrode" id="electrode2"></div>
+        <div class="measure-flask" id="measureFlask2"></div>
+        <div class="surface"></div><div class="surface-label">Mặt dung dịch</div>
+        <div class="zone"></div><div class="zone-label">Vùng đo chuẩn 2 cm</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Bình 2 – KCl</h3>
+      <div class="actions">
+        <button class="btn btn-green" id="lower2" disabled>HẠ ĐIỆN CỰC</button>
+        <button class="btn btn-primary" id="measure2" disabled>BẮT ĐẦU ĐO</button>
+      </div>
+      <div class="small-progress"><span id="measureProgress2"></span></div>
+      <div class="status" id="measureStatus2">Hãy vệ sinh điện cực trước.</div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" id="next5" disabled>TIẾP TỤC</button></div>
+  </section>
+
+  <section class="screen" id="s6">
+    <h2>Bước 6. Phân loại và giải thích</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>pH<sub>H₂O</sub> = <span id="valueWater"></span></h3>
+        <div class="class-grid" id="classWater"></div>
+        <div class="status" id="classWaterStatus">Hãy chọn loại đất.</div>
+      </div>
+      <div class="card">
+        <h3>pH<sub>KCl</sub> = <span id="valueKcl"></span></h3>
+        <div class="class-grid" id="classKcl"></div>
+        <div class="status" id="classKclStatus">Hãy chọn loại đất.</div>
+      </div>
+    </div>
+
+    <div class="question">
+      <h4>Câu 1. Vì sao phải đo bằng cả nước cất và KCl?</h4>
+      <button class="option" data-q="1" data-ok="1">Nước cất xác định độ chua hiện tại; KCl giúp xác định thêm độ chua trao đổi.</button>
+      <button class="option" data-q="1">Nước cất làm tăng độ chua, còn KCl trung hòa hoàn toàn đất.</button>
+      <button class="option" data-q="1">Hai dung dịch chỉ dùng để kiểm tra độ chính xác của cân.</button>
+    </div>
+
+    <div class="question">
+      <h4>Câu 2. Vì sao pH<sub>KCl</sub> thường thấp hơn pH<sub>H₂O</sub>?</h4>
+      <button class="option" data-q="2">KCl làm nước bay hơi nhanh hơn nên pH giảm.</button>
+      <button class="option" data-q="2" data-ok="1">K⁺ đẩy thêm H⁺ từ bề mặt keo đất ra dung dịch, làm nồng độ H⁺ tăng.</button>
+      <button class="option" data-q="2">KCl làm đất mất hoàn toàn chất hữu cơ.</button>
+    </div>
+
+    <div class="actions"><button class="btn btn-green" id="showResult" disabled>XEM PHIẾU KẾT QUẢ</button></div>
+  </section>
+
+  <section class="screen" id="s7">
+    <h2>Phiếu kết quả</h2>
+    <div class="result">
+      <table>
+        <tr><td>Khối lượng đất – Bình H₂O</td><td>20 g</td></tr>
+        <tr><td>Khối lượng đất – Bình KCl</td><td>20 g</td></tr>
+        <tr><td>Thể tích nước cất</td><td>50 mL</td></tr>
+        <tr><td>Thể tích KCl 1N</td><td>50 mL</td></tr>
+        <tr><td>pH<sub>H₂O</sub></td><td id="rWater"></td></tr>
+        <tr><td>Phân loại theo pH<sub>H₂O</sub></td><td id="rWaterClass"></td></tr>
+        <tr><td>pH<sub>KCl</sub></td><td id="rKcl"></td></tr>
+        <tr><td>Phân loại theo pH<sub>KCl</sub></td><td id="rKclClass"></td></tr>
+        <tr><td>Chênh lệch pH</td><td id="rDiff"></td></tr>
+      </table>
+      <div class="status ok"><b>Nhận xét khoa học:</b> pH<sub>H₂O</sub> phản ánh độ chua hiện tại của dung dịch đất; pH<sub>KCl</sub> phản ánh thêm độ chua trao đổi nên thường thấp hơn pH<sub>H₂O</sub>.</div>
+      <div class="actions">
+        <button class="btn btn-green" id="confirm">✅ XÁC NHẬN CHÍNH XÁC</button>
+      </div>
+      <div class="celebrate" id="celebrate">🎉 Chúc mừng em đã hoàn thành thí nghiệm!
+        <div style="font-size:16px;margin-top:8px;font-weight:600">Em đã thực hiện đúng quy trình và xác định chính xác độ chua của đất.</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-green" id="restart">↻ LÀM LẠI THÍ NGHIỆM MỚI</button>
+      <button class="btn btn-light" id="review">XEM LẠI QUY TRÌNH</button>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="lookupModal">
+  <div class="modal-box">
+    <h2>Bảng phân loại đất theo pH</h2>
+    <h3>Theo pH<sub>H₂O</sub></h3>
+    <table class="lookup">
+      <tr><th>Giá trị</th><th>Phân loại</th></tr>
+      <tr><td>&lt; 4,5</td><td>Đất rất chua</td></tr>
+      <tr><td>4,5 – 5,5</td><td>Đất chua</td></tr>
+      <tr><td>5,6 – 6,5</td><td>Đất chua ít</td></tr>
+      <tr><td>6,6 – 7,5</td><td>Đất trung tính</td></tr>
+      <tr><td>≥ 7,6</td><td>Đất kiềm</td></tr>
+    </table>
+    <h3>Theo pH<sub>KCl</sub></h3>
+    <table class="lookup">
+      <tr><th>Giá trị</th><th>Phân loại</th></tr>
+      <tr><td>&lt; 4,0</td><td>Đất rất chua</td></tr>
+      <tr><td>4,0 – 5,0</td><td>Đất chua</td></tr>
+      <tr><td>&gt; 5,0 – 6,0</td><td>Đất chua ít</td></tr>
+      <tr><td>&gt; 6,0 – 7,0</td><td>Đất trung tính</td></tr>
+      <tr><td>&gt; 7,0</td><td>Đất kiềm</td></tr>
+    </table>
+    <div class="actions"><button class="btn btn-primary" id="closeLookup">ĐÓNG</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const labels = ["Đất rất chua","Đất chua","Đất chua ít","Đất trung tính","Đất kiềm"];
+  const samples = [
+    {w:4.18,k:3.46},{w:5.08,k:4.39},{w:6.12,k:5.42},{w:7.03,k:6.35},{w:8.01,k:7.28}
+  ];
+
+  let sample, lastIndex = -1;
+  let mass = 0, tare = false, weighTarget = 1;
+  let soil = [false,false];
+  let solutionTarget = 1, filled = false, solution = [false,false];
+  let rinseStage = 0;
+  let pickedWater = null, pickedKcl = null, q1ok = false, q2ok = false;
+
+  function chooseSample(){
+    let i;
+    do{i=Math.floor(Math.random()*samples.length)}while(i===lastIndex && samples.length>1);
+    lastIndex=i;
+    const base=samples[i];
+    sample={
+      water:+(base.w+(Math.random()-.5)*.14).toFixed(2),
+      kcl:+(base.k+(Math.random()-.5)*.10).toFixed(2)
+    };
+    if(sample.kcl>=sample.water) sample.kcl=+(sample.water-.55).toFixed(2);
+  }
+
+  function classifyWater(v){
+    if(v<4.5)return labels[0];
+    if(v<=5.5)return labels[1];
+    if(v<=6.5)return labels[2];
+    if(v<=7.5)return labels[3];
+    return labels[4];
+  }
+  function classifyKcl(v){
+    if(v<4.0)return labels[0];
+    if(v<=5.0)return labels[1];
+    if(v<=6.0)return labels[2];
+    if(v<=7.0)return labels[3];
+    return labels[4];
+  }
+
+  function flaskSVG(title, hasSoil, hasLiquid, id){
+    return `
+      <div class="flask-box">
+        <div class="flask-title">${title}</div>
+        <svg class="flask-svg" viewBox="0 0 180 240">
+          <defs>
+            <clipPath id="clip-${id}">
+              <path d="M62 18h56v58l40 112c7 20-7 34-27 34H49c-20 0-34-14-27-34L62 76z"/>
+            </clipPath>
+          </defs>
+          <path d="M62 18h56v58l40 112c7 20-7 34-27 34H49c-20 0-34-14-27-34L62 76z"
+            fill="rgba(255,255,255,.62)" stroke="#81929f" stroke-width="5"/>
+          <path d="M59 18h62" stroke="#6b7d89" stroke-width="7" stroke-linecap="round"/>
+          <g clip-path="url(#clip-${id})">
+            <rect x="20" y="${hasLiquid?118:220}" width="140" height="${hasLiquid?105:0}" fill="rgba(210,177,130,.52)"/>
+            <ellipse cx="90" cy="205" rx="${hasSoil?52:0}" ry="${hasSoil?16:0}" fill="#8a5528"/>
+            ${hasLiquid?'<circle cx="58" cy="150" r="3" fill="#9b6a3b" opacity=".55"/><circle cx="112" cy="140" r="2.5" fill="#9b6a3b" opacity=".55"/><circle cx="82" cy="169" r="2" fill="#9b6a3b" opacity=".55"/>':''}
+          </g>
+        </svg>
+      </div>`;
+  }
+
+  function renderFlasks(){
+    $("flasks1").innerHTML =
+      flaskSVG("Bình 1 – H₂O",soil[0],false,"a1")+
+      flaskSVG("Bình 2 – KCl",soil[1],false,"a2");
+    $("flasks2").innerHTML =
+      flaskSVG("Bình 1 – H₂O",true,solution[0],"b1")+
+      flaskSVG("Bình 2 – KCl",true,solution[1],"b2");
+    $("flasks3").innerHTML =
+      flaskSVG("Bình 1 – H₂O",true,true,"c1")+
+      flaskSVG("Bình 2 – KCl",true,true,"c2");
+    $("measureFlask1").innerHTML = flaskSVG("Bình 1 – H₂O",true,true,"m1");
+    $("measureFlask2").innerHTML = flaskSVG("Bình 2 – KCl",true,true,"m2");
+  }
+
+  function show(n){
+    document.querySelectorAll(".screen").forEach((el,i)=>el.classList.toggle("active",i===n));
+    const names=["Sẵn sàng bắt đầu","Bước 1/6: Cân đất","Bước 2/6: Thêm dung dịch","Bước 3/6: Lắc mẫu","Bước 4/6: Đo pH bằng nước cất","Bước 5/6: Đo pH bằng KCl","Bước 6/6: Phân loại","Hoàn thành"];
+    $("progressLabel").textContent=names[n];
+    $("progressBar").style.width=(n/7*100)+"%";
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function progress(el,duration,done){
+    const start=performance.now();
+    function frame(now){
+      const p=Math.min(1,(now-start)/duration);
+      el.style.width=(p*100)+"%";
+      if(p<1)requestAnimationFrame(frame);else done();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function reset(){
+    chooseSample();
+    mass=0;tare=false;weighTarget=1;soil=[false,false];
+    solutionTarget=1;filled=false;solution=[false,false];
+    rinseStage=0;pickedWater=null;pickedKcl=null;q1ok=false;q2ok=false;
+
+    $("massDisplay").textContent="0.00 g";
+    $("paper").className="paper";
+    $("tareBtn").disabled=false;$("addBtn").disabled=true;$("subBtn").disabled=true;$("transferBtn").disabled=true;
+    $("weighTitle").textContent="Cân đất cho Bình 1 – H₂O";
+    $("weighStatus").textContent="Hãy đặt giấy cân và trừ bì.";$("weighStatus").className="status";
+    $("next1").disabled=true;
+
+    $("solutionTitle").textContent="Đong 50 mL nước cất";
+    $("cylLiquid").style.height="0";
+    $("fillBtn").disabled=false;$("pourBtn").disabled=true;
+    $("solutionStatus").textContent="Hãy rót đến đúng vạch 50 mL.";$("solutionStatus").className="status";
+    $("next2").disabled=true;
+
+    $("shakeProgress").style.width="0";$("shakeBtn").disabled=false;$("next3").disabled=true;
+    $("shakeStatus").textContent="Chưa lắc mẫu.";$("shakeStatus").className="status";
+
+    $("electrode1").classList.remove("lowered");$("ph1").textContent="--.--";
+    $("lower1").disabled=false;$("measure1").disabled=true;$("next4").disabled=true;
+    $("measureProgress1").style.width="0";$("measureStatus1").textContent="Điện cực chưa được đặt vào mẫu.";$("measureStatus1").className="status";
+
+    $("lift").disabled=false;$("rinse").disabled=true;$("blot").disabled=true;
+    $("rinseStatus").textContent="Cần nhấc điện cực khỏi bình H₂O.";$("rinseStatus").className="status";
+    $("electrode2").classList.remove("lowered");$("ph2").textContent="--.--";
+    $("lower2").disabled=true;$("measure2").disabled=true;$("next5").disabled=true;
+    $("measureProgress2").style.width="0";$("measureStatus2").textContent="Hãy vệ sinh điện cực trước.";$("measureStatus2").className="status";
+
+    document.querySelectorAll(".option").forEach(b=>{b.classList.remove("good","bad");b.disabled=false});
+    $("showResult").disabled=true;$("celebrate").style.display="none";
+    renderFlasks();
+  }
+
+  $("startBtn").onclick=()=>{reset();show(1)};
+
+  $("tareBtn").onclick=()=>{
+    tare=true;mass=0;$("paper").classList.add("with-soil");
+    $("tareBtn").disabled=true;$("addBtn").disabled=false;$("subBtn").disabled=false;
+    $("weighStatus").textContent="Đã trừ bì. Mỗi lần thêm 5 g.";$("weighStatus").className="status ok";
+  };
+  $("addBtn").onclick=()=>{
+    if(!tare)return;
+    mass=Math.min(25,mass+5);
+    $("massDisplay").textContent=mass.toFixed(2)+" g";
+    $("transferBtn").disabled=mass!==20;
+    $("weighStatus").textContent=mass===20?"Đã đủ 20 g. Có thể cho đất vào bình.":`Khối lượng hiện tại: ${mass} g.`;
+    $("weighStatus").className=mass===20?"status ok":"status";
+  };
+  $("subBtn").onclick=()=>{
+    mass=Math.max(0,mass-5);
+    $("massDisplay").textContent=mass.toFixed(2)+" g";
+    $("transferBtn").disabled=mass!==20;
+    $("weighStatus").textContent=`Khối lượng hiện tại: ${mass} g.`;
+    $("weighStatus").className="status";
+  };
+  $("transferBtn").onclick=()=>{
+    if(mass!==20)return;
+    soil[weighTarget-1]=true;
+    $("paper").style.transform="translate(150px,-38px) rotate(34deg)";
+    setTimeout(()=>{
+      renderFlasks();
+      $("paper").style.transform="";
+      mass=0;tare=false;$("massDisplay").textContent="0.00 g";
+      $("tareBtn").disabled=false;$("addBtn").disabled=true;$("subBtn").disabled=true;$("transferBtn").disabled=true;
+      if(weighTarget===1){
+        weighTarget=2;
+        $("weighTitle").textContent="Cân đất cho Bình 2 – KCl";
+        $("weighStatus").textContent="Mẫu thứ nhất đã vào bình. Hãy cân mẫu thứ hai.";
+      }else{
+        $("weighStatus").textContent="Đã chuẩn bị đủ hai mẫu đất 20 g.";$("weighStatus").className="status ok";
+        $("next1").disabled=false;
+      }
+    },550);
+  };
+  $("next1").onclick=()=>show(2);
+
+  $("fillBtn").onclick=()=>{
+    filled=true;$("cylLiquid").style.height="54%";
+    $("fillBtn").disabled=true;$("pourBtn").disabled=false;
+    $("solutionStatus").textContent="Đã đủ 50 mL. Hãy đổ vào đúng bình.";$("solutionStatus").className="status ok";
+  };
+  $("pourBtn").onclick=()=>{
+    if(!filled)return;
+    solution[solutionTarget-1]=true;
+    $("cylinder").style.transform="rotate(18deg)";
+    setTimeout(()=>{
+      $("cylinder").style.transform="";
+      $("cylLiquid").style.height="0";
+      renderFlasks();
+      filled=false;$("pourBtn").disabled=true;
+      if(solutionTarget===1){
+        solutionTarget=2;$("fillBtn").disabled=false;
+        $("solutionTitle").textContent="Đong 50 mL KCl 1N";
+        $("solutionStatus").textContent="Bình 1 đã có nước cất. Tiếp tục với KCl 1N.";$("solutionStatus").className="status";
+      }else{
+        $("fillBtn").disabled=true;$("next2").disabled=false;
+        $("solutionStatus").textContent="Đã thêm đúng dung dịch vào cả hai bình.";$("solutionStatus").className="status ok";
+      }
+    },700);
+  };
+  $("next2").onclick=()=>show(3);
+
+  $("shakeBtn").onclick=()=>{
+    $("shakeBtn").disabled=true;
+    document.querySelectorAll("#flasks3 .flask-svg").forEach(f=>f.classList.add("shake"));
+    $("shakeStatus").textContent="Đang mô phỏng lắc mẫu trong 15–20 phút...";
+    progress($("shakeProgress"),8000,()=>{
+      document.querySelectorAll("#flasks3 .flask-svg").forEach(f=>f.classList.remove("shake"));
+      $("shakeStatus").textContent="Đã lắc đủ thời gian.";$("shakeStatus").className="status ok";
+      $("next3").disabled=false;
+    });
+  };
+  $("next3").onclick=()=>show(4);
+
+  $("lower1").onclick=()=>{
+    $("electrode1").classList.add("lowered");
+    $("lower1").disabled=true;$("measure1").disabled=false;
+    $("measureStatus1").textContent="Vị trí chuẩn: đầu điện cực ngập khoảng 2 cm dưới mặt dung dịch.";
+    $("measureStatus1").className="status ok";
+  };
+  $("measure1").onclick=()=>{
+    $("measure1").disabled=true;
+    $("measureStatus1").textContent="Đang chờ số đo ổn định...";
+    let t=setInterval(()=>{$("ph1").textContent=(sample.water+(Math.random()-.5)*.18).toFixed(2)},180);
+    progress($("measureProgress1"),5000,()=>{
+      clearInterval(t);$("ph1").textContent=sample.water.toFixed(2);
+      $("measureStatus1").textContent="Giá trị pH bằng nước cất đã ổn định.";$("measureStatus1").className="status ok";
+      $("next4").disabled=false;
+    });
+  };
+  $("next4").onclick=()=>show(5);
+
+  $("lift").onclick=()=>{
+    rinseStage=1;$("lift").disabled=true;$("rinse").disabled=false;
+    $("rinseStatus").textContent="Đã nhấc điện cực. Hãy rửa bằng nước cất.";
+  };
+  $("rinse").onclick=()=>{
+    rinseStage=2;$("rinse").disabled=true;$("blot").disabled=false;
+    $("rinseStatus").textContent="Đã rửa bằng nước cất. Hãy thấm khô nhẹ.";
+  };
+  $("blot").onclick=()=>{
+    rinseStage=3;$("blot").disabled=true;$("lower2").disabled=false;
+    $("rinseStatus").textContent="Điện cực đã sạch, có thể đo bình KCl.";$("rinseStatus").className="status ok";
+    $("measureStatus2").textContent="Hãy hạ điện cực vào bình KCl.";
+  };
+  $("lower2").onclick=()=>{
+    if(rinseStage<3)return;
+    $("electrode2").classList.add("lowered");
+    $("lower2").disabled=true;$("measure2").disabled=false;
+    $("measureStatus2").textContent="Vị trí chuẩn: đầu điện cực ngập khoảng 2 cm dưới mặt dung dịch.";
+    $("measureStatus2").className="status ok";
+  };
+  $("measure2").onclick=()=>{
+    $("measure2").disabled=true;
+    $("measureStatus2").textContent="Đang chờ số đo ổn định...";
+    let t=setInterval(()=>{$("ph2").textContent=(sample.kcl+(Math.random()-.5)*.18).toFixed(2)},180);
+    progress($("measureProgress2"),5000,()=>{
+      clearInterval(t);$("ph2").textContent=sample.kcl.toFixed(2);
+      $("measureStatus2").textContent="Giá trị pH bằng KCl đã ổn định.";$("measureStatus2").className="status ok";
+      $("next5").disabled=false;
+    });
+  };
+  $("next5").onclick=()=>{
+    $("valueWater").textContent=sample.water.toFixed(2);
+    $("valueKcl").textContent=sample.kcl.toFixed(2);
+    buildClasses();
+    show(6);
+  };
+
+  function buildClasses(){
+    function make(boxId,type){
+      const box=$(boxId);box.innerHTML="";
+      labels.forEach(label=>{
+        const b=document.createElement("button");
+        b.className="class-btn";b.textContent=label;
+        b.onclick=()=>pickClass(type,label,b);
+        box.appendChild(b);
+      });
+    }
+    make("classWater","water");make("classKcl","kcl");
+  }
+
+  function pickClass(type,label,btn){
+    const correct=type==="water"?classifyWater(sample.water):classifyKcl(sample.kcl);
+    const box=type==="water"?$("classWater"):$("classKcl");
+    const status=type==="water"?$("classWaterStatus"):$("classKclStatus");
+    box.querySelectorAll(".class-btn").forEach(x=>x.classList.remove("good","bad"));
+    if(label===correct){
+      btn.classList.add("good");
+      status.textContent="Phân loại chính xác.";status.className="status ok";
+      if(type==="water")pickedWater=label;else pickedKcl=label;
+    }else{
+      btn.classList.add("bad");
+      status.textContent="Em hãy đối chiếu lại với đúng bảng phân loại.";status.className="status warn";
+      if(type==="water")pickedWater=null;else pickedKcl=null;
+    }
+    updateResultButton();
+  }
+
+  document.querySelectorAll(".option").forEach(btn=>{
+    btn.onclick=()=>{
+      const q=btn.dataset.q;
+      document.querySelectorAll(`.option[data-q="${q}"]`).forEach(x=>x.classList.remove("good","bad"));
+      if(btn.dataset.ok){
+        btn.classList.add("good");
+        if(q==="1")q1ok=true;else q2ok=true;
+      }else{
+        btn.classList.add("bad");
+        if(q==="1")q1ok=false;else q2ok=false;
+      }
+      updateResultButton();
+    };
+  });
+
+  function updateResultButton(){
+    $("showResult").disabled=!(pickedWater&&pickedKcl&&q1ok&&q2ok);
+  }
+
+  $("showResult").onclick=()=>{
+    $("rWater").textContent=sample.water.toFixed(2);
+    $("rKcl").textContent=sample.kcl.toFixed(2);
+    $("rWaterClass").textContent=classifyWater(sample.water);
+    $("rKclClass").textContent=classifyKcl(sample.kcl);
+    $("rDiff").textContent=(sample.water-sample.kcl).toFixed(2);
+    show(7);
+  };
+
+  $("confirm").onclick=()=>{
+    $("celebrate").style.display="block";
+    $("progressBar").style.width="100%";
+  };
+  $("restart").onclick=()=>{reset();show(1)};
+  $("review").onclick=()=>show(1);
+
+  $("lookupBtn").onclick=()=>$("lookupModal").classList.add("show");
+  $("closeLookup").onclick=()=>$("lookupModal").classList.remove("show");
+  $("lookupModal").onclick=e=>{if(e.target===$("lookupModal"))$("lookupModal").classList.remove("show")};
+
+  chooseSample();
+  renderFlasks();
+})();
+</script>
+</body>
+</html>
